@@ -22,16 +22,18 @@
     let response = await gapi.client.photoslibrary.mediaItems.list({
       "pageSize": 100
     })
-    console.log(JSON.parse(response.body))
-    let pageToken = response.nextPageToken
+    let body = JSON.parse(response.body)
+    console.log(body)
+    let pageToken = body.nextPageToken
     
     for (let i = 0; i < 100; i++) {
       let response = await gapi.client.photoslibrary.mediaItems.list({
         "pageSize": 100,
         "pageToken": pageToken
       })
-      console.log(JSON.parse(response.body))
-      pageToken = response.nextPageToken
+      body = JSON.parse(response.body)
+      console.log(body)
+      pageToken = body.nextPageToken
     }
   }
   gapi.load("client:auth2", function() {
