@@ -19,22 +19,18 @@
   }
   // Make sure the client is loaded and sign-in is complete before calling this method.
   async function execute() {
-    let response = await gapi.client.photoslibrary.mediaItems.list({
-      "pageSize": 100
-    })
-    let body = JSON.parse(response.body)
-    console.log(body)
-    let pageToken = body.nextPageToken
-    
-    for (let i = 0; i < 100; i++) {
+    let pageToken = undefined
+    do {
       let response = await gapi.client.photoslibrary.mediaItems.list({
         "pageSize": 100,
         "pageToken": pageToken
       })
       body = JSON.parse(response.body)
-      console.log(body)
       pageToken = body.nextPageToken
-    }
+      for (let item of body.mediaItems) {
+        console.log(item.filename);
+      }
+    } while (pageToken != undefined)
   }
   gapi.load("client:auth2", function() {
     gapi.auth2.init({client_id: "358334496936-62c2p44lel2gs4vkt5hgcesgl8gcktc0.apps.googleusercontent.com"});
