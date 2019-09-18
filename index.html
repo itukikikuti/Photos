@@ -1,0 +1,139 @@
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+    init();
+    
+    async function init() {
+        await load();
+        gapi.auth2.init({ client_id: "358334496936-62c2p44lel2gs4vkt5hgcesgl8gcktc0.apps.googleusercontent.com" });
+    }
+    function load() {
+        return new Promise(resolve => {
+            gapi.load("client:auth2", resolve);
+        });
+    }
+    async function login() {
+        await gapi.auth2.getAuthInstance().signIn({ scope: "https://www.googleapis.com/auth/photoslibrary https://www.googleapis.com/auth/photoslibrary.readonly https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata" });
+        await gapi.client.load("https://content.googleapis.com/discovery/v1/apis/photoslibrary/v1/rest");
+        //gapi.client.photoslibrary.mediaItems.list
+        //fileList = await getFileList();
+        //for (let i = fileList.result.files.length - 1; i >= 0; i--) {
+        //    let rand = Math.floor(Math.random() * (i + 1));
+        //    [fileList.result.files[i], fileList.result.files[rand]] = [fileList.result.files[rand], fileList.result.files[i]];
+        //}
+        //await displayFileList();
+    }
+    async function displayFileList() {
+        const columns = 4;
+        let temp = `<div class="section">`;
+        fileList.result.files.forEach((file, i) => {
+            if (i % columns == 0) temp += `<div class="tile is-ancestor">`;
+            temp += `
+                <div class="tile is-parent is-${12 / columns}">
+                    <a class="card tile is-child" href="javascript:playFile(${i})">
+                        <div class="card-image">
+                            <figure class="image is-16by9">
+                                <img src="${file.thumbnailLink}" />
+                            </figure>
+                        </div>
+                        <div class="card-content">
+                            <p>${file.name}</p>
+                        </div>
+                    </a>
+                </div>
+            `;
+            if (i % columns == columns - 1) temp += `</div>`;
+        });
+        temp += `</div>`;
+        
+        let main = document.getElementById("main");
+        main.innerHTML = temp;
+    }
+    async function playFile(i) {
+        if (i < 0) i = fileList.result.files.length - 1;
+        if (i >= fileList.result.files.length) i = 0;
+        index = i;
+        
+        let file = await getFile(fileList.result.files[i].id);
+        await createPermission(fileList.result.files[i].id);
+        
+        let main = document.getElementById("main");
+        main.innerHTML = "";
+        
+        iframe = document.createElement("iframe");
+        iframe.setAttribute("id", "iframe-video-player");
+        //iframe.setAttribute("src", `https://youtube.googleapis.com/embed/?status=ok&hl=ja&allow_embed=0&ps=docs&partnerid=30&autoplay=0&docid=${fileId}&abd=0&public=true&el=embed&title=${encodeURI(file.result.name)}&BASE_URL=https%3A%2F%2Fdrive.google.com%2F&iurl=https%3A%2F%2Fdrive.google.com%2Fvt%3Fauthuser%3D0%26id%3D1kg34PynLUpTtn0CktZ2MvK-XEBEVU6SLNA%26s%3DAMedNnoAAAAAW4Ev3Y-oUd9LXQ41gOR_-cr1M3gG5rDp&cc3_module=1&reportabuseurl=https%3A%2F%2Fdrive.google.com%2Fabuse%3Fauthuser%3D0%26id%3D1kg34PynLUpTtn0CktZ2MvK-XEBEVU6SLNA&token=1&plid=V0QVThNmfL9v-Q&timestamp=1535185853278&length_seconds=1310&BASE_YT_URL=https%3A%2F%2Fdrive.google.com%2F&cc_load_policy=1&authuser=0&wmode=window&override_hl=1&enablecastapi=0&enablepostapi=1&postid=iframe-video-player&origin=https%3A%2F%2Fdrive.google.com`);
+        iframe.setAttribute("src", `https://drive.google.com/file/d/${file.result.id}/preview`);
+        iframe.setAttribute("width", "100%");
+        iframe.setAttribute("height", "100%");
+        iframe.setAttribute("allowfullscreen", "");
+        iframe.setAttribute("style", "display:block");
+        main.appendChild(iframe);
+        
+        let button = document.createElement("a");
+        button.setAttribute("class", "button is-outlined");
+        button.setAttribute("style", "position:fixed;top:0;left:0");
+        button.textContent = "戻る";
+        button.onclick = async function() {
+            await deletePermission(fileList.result.files[i].id, "anyoneWithLink");
+            await displayFileList();
+        }
+        main.appendChild(button);
+        
+        button = document.createElement("a");
+        button.setAttribute("class", "button is-outlined");
+        button.setAttribute("style", "position:fixed;bottom:0;left:40%");
+        button.textContent = "前へ";
+        button.onclick = async function() {
+            await deletePermission(fileList.result.files[i].id, "anyoneWithLink");
+            await playFile(index - 1);
+        }
+        main.appendChild(button);
+        
+        button = document.createElement("a");
+        button.setAttribute("class", "button is-outlined");
+        button.setAttribute("style", "position:fixed;bottom:0;left:60%");
+        button.textContent = "次へ";
+        button.onclick = async function() {
+            await deletePermission(fileList.result.files[i].id, "anyoneWithLink");
+            await playFile(index + 1);
+        }
+        main.appendChild(button);
+    }
+    async function getFileList() {
+        let response = await gapi.client.drive.files.list({
+            "pageSize": 1000,
+            "orderBy": "name",
+            "q": "mimeType = 'video/mp4' or mimeType = 'video/x-flv'",
+            "fields": "files(id,name,thumbnailLink)"
+        });
+        console.log(response);
+        return response;
+    }
+    async function getFile(fileId) {
+        let response = await gapi.client.drive.files.get({
+            "fileId": fileId,
+            "fields": "id,name,webViewLink,webContentLink"
+        });
+        console.log(response);
+        return response;
+    }
+    async function createPermission(fileId) {
+        let response = await gapi.client.drive.permissions.create({
+            "fileId": fileId,
+            "resource": {
+                "role": "writer",
+                "type": "anyone"
+            }
+        });
+        console.log(response);
+        return response;
+    }
+    async function deletePermission(fileId, permissionId) {
+        let response = await gapi.client.drive.permissions.delete({
+            "fileId": fileId,
+            "permissionId": permissionId
+        });
+        console.log(response);
+    }
+</script>
+<button onclick="login()">login</button>
