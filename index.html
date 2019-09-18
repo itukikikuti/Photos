@@ -23,6 +23,15 @@
       "pageSize": 100
     })
     console.log(JSON.parse(response.body))
+    let pageToken = response.nextPageToken
+    
+    for (let i = 0; i < 100; i++) {
+      let response = await gapi.client.photoslibrary.mediaItems.list({
+        "pageSize": 100,
+        "pageToken": pageToken
+      })
+      pageToken = response.nextPageToken
+    }
   }
   gapi.load("client:auth2", function() {
     gapi.auth2.init({client_id: "358334496936-62c2p44lel2gs4vkt5hgcesgl8gcktc0.apps.googleusercontent.com"});
