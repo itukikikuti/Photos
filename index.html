@@ -30,6 +30,7 @@
         "pageSize": 100,
         "pageToken": pageToken
       })
+      console.log(JSON.parse(response.body))
       pageToken = response.nextPageToken
     }
   }
